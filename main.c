@@ -4,6 +4,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "lib_stb_image/stb_image_write.h"
 
+#include "search.h"
+
 int main (int argc, char *argv[])
 {
     if (argc != 3)
@@ -13,8 +15,8 @@ int main (int argc, char *argv[])
     }
 
     // Get image paths from arguments.
-    const char *inputImgPath = argv[1];
-    const char *searchImgPath = argv[2];
+     char *inputImgPath = argv[1];
+     char *searchImgPath = argv[2];
 
     // ==================================== Loading input image.
     int inputImgWidth;
@@ -42,12 +44,35 @@ int main (int argc, char *argv[])
 
 
     // ====================================  Save example: save a copy of 'inputImg'
+    //unsigned char *saveExample = (unsigned char *)malloc(inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char));
+   // memcpy( saveExample, inputImg, inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char) );
+    printf("%i , %i \n", inputImgWidth, inputImgHeight);
+    unsigned char *greyScaleImg= greyScale(inputImg, inputImgWidth, inputImgHeight);
+    unsigned char *greyScaleSearchImg= greyScale(searchImg, searchImgWidth, searchImgHeight);
+    //stbi_write_png("img/save_example.png", inputImgWidth, inputImgHeight, 3, saveExample, inputImgWidth*3);
+    //stbi_write_png("img/save_example.png", inputImgWidth, inputImgHeight, 1, greyScaleImg, inputImgWidth);
+
+    /* */
+
+    struct point position = search(
+        greyScaleImg, inputImgWidth, inputImgHeight, 
+        greyScaleSearchImg, searchImgWidth, searchImgHeight
+    );
+    // 29214668.000000
+    // 41969804.000000
+    printf("x: %i, y: %i \n", position.x, position.y);
+    printf("valeur SSD : %li\n", evaluator(position.x, position.y, 
+        greyScaleImg, inputImgWidth, inputImgHeight, 
+        greyScaleSearchImg, searchImgWidth, searchImgHeight
+    ));
+    
     unsigned char *saveExample = (unsigned char *)malloc(inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char));
     memcpy( saveExample, inputImg, inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char) );
+    trace(saveExample,inputImgWidth, inputImgHeight, position, searchImgWidth, searchImgHeight);
+    stbi_write_png("img/save_example.png", inputImgWidth, inputImgHeight, 3, saveExample, inputImgWidth*3);
 
-    stbi_write_png("img/save_example.png", inputImgWidth, inputImgHeight, 3, saveExample, inputImgWidth * 3);
-
-    free(saveExample);
+    free(greyScaleImg);
+    free(greyScaleSearchImg);
     stbi_image_free(inputImg); 
     stbi_image_free(searchImg); 
 
