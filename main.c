@@ -4,7 +4,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "lib_stb_image/stb_image_write.h"
 
-#include "search.h"
+#include "search_ref.h"
+#include "search_openmp.h"
 
 int main (int argc, char *argv[])
 {
@@ -44,31 +45,30 @@ int main (int argc, char *argv[])
 
 
     // ====================================  Save example: save a copy of 'inputImg'
-    //unsigned char *saveExample = (unsigned char *)malloc(inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char));
-   // memcpy( saveExample, inputImg, inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char) );
+
+
+    double time = omp_get_wtime();
+   
     printf("%i , %i \n", inputImgWidth, inputImgHeight);
-    unsigned char *greyScaleImg= greyScale(inputImg, inputImgWidth, inputImgHeight);
-    unsigned char *greyScaleSearchImg= greyScale(searchImg, searchImgWidth, searchImgHeight);
-    //stbi_write_png("img/save_example.png", inputImgWidth, inputImgHeight, 3, saveExample, inputImgWidth*3);
-    //stbi_write_png("img/save_example.png", inputImgWidth, inputImgHeight, 1, greyScaleImg, inputImgWidth);
+    unsigned char *greyScaleImg= greyScaleRef(inputImg, inputImgWidth, inputImgHeight);
+    unsigned char *greyScaleSearchImg= greyScaleRef(searchImg, searchImgWidth, searchImgHeight);
+    
 
-    /* */
-
-    struct point position = search(
+    struct point position = searchRef(
         greyScaleImg, inputImgWidth, inputImgHeight, 
         greyScaleSearchImg, searchImgWidth, searchImgHeight
     );
     // 29214668.000000
     // 41969804.000000
     printf("x: %i, y: %i \n", position.x, position.y);
-    printf("valeur SSD : %li\n", evaluator(position.x, position.y, 
+    printf("valeur SSD : %li\n", evaluatorRef(position.x, position.y, 
         greyScaleImg, inputImgWidth, inputImgHeight, 
         greyScaleSearchImg, searchImgWidth, searchImgHeight
     ));
     
     unsigned char *saveExample = (unsigned char *)malloc(inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char));
     memcpy( saveExample, inputImg, inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char) );
-    trace(saveExample,inputImgWidth, inputImgHeight, position, searchImgWidth, searchImgHeight);
+    traceRef(saveExample,inputImgWidth, inputImgHeight, position, searchImgWidth, searchImgHeight);
     stbi_write_png("img/save_example.png", inputImgWidth, inputImgHeight, 3, saveExample, inputImgWidth*3);
 
     free(greyScaleImg);
@@ -76,7 +76,9 @@ int main (int argc, char *argv[])
     stbi_image_free(inputImg); 
     stbi_image_free(searchImg); 
 
-    printf("Good bye!\n");
+    time = omp_get_wtime()-time;
+
+    printf("Good bye! time taken : %f s \n",time);
 
     return EXIT_SUCCESS;
 }

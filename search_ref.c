@@ -1,7 +1,7 @@
-#include "search.h"
+#include "search_ref.h"
 
 // Passage en niveau de gris
-unsigned char * greyScale( unsigned char * img,  unsigned int width,  unsigned int height){
+unsigned char * greyScaleRef( unsigned char * img,  unsigned int width,  unsigned int height){
 
     unsigned char *greyScaleImg = (unsigned char *)malloc(width * height * 1* sizeof(unsigned char));
     
@@ -23,7 +23,7 @@ unsigned char * greyScale( unsigned char * img,  unsigned int width,  unsigned i
 
 
 //SSD evaluator
-uint64_t evaluator( unsigned int xOffset ,  unsigned int yOffset, 
+uint64_t evaluatorRef( unsigned int xOffset ,  unsigned int yOffset, 
         unsigned char * img,  unsigned int imgWidth,  unsigned int imgHeight,
         unsigned char * imgToSearch,  unsigned int imgSearchWidth,  unsigned int imgSearchHeight
 ) {
@@ -46,7 +46,7 @@ uint64_t evaluator( unsigned int xOffset ,  unsigned int yOffset,
 }
 
 // Recherche exaustive dans l'image
-struct point search(unsigned char * img ,  unsigned int imgWidth,  unsigned int imgHeight, unsigned char * imgToSearch,  unsigned int imgSearchWidth,  unsigned int imgSearchHeight){
+struct point searchRef(unsigned char * img ,  unsigned int imgWidth,  unsigned int imgHeight, unsigned char * imgToSearch,  unsigned int imgSearchWidth,  unsigned int imgSearchHeight){
 
     // Comparer "imgToSearch" -> C avec l'ensemble des sous images de "img" -> Q
 
@@ -57,7 +57,7 @@ struct point search(unsigned char * img ,  unsigned int imgWidth,  unsigned int 
     for (unsigned int x = 0; x < imgWidth - imgSearchWidth; x++) {
         for (unsigned int y = 0; y < imgHeight - imgSearchHeight; y++) { 
 
-            currSSD = evaluator(x, y, 
+            currSSD = evaluatorRef(x, y, 
                 img, imgWidth, imgHeight, 
                 imgToSearch, imgSearchWidth, imgSearchHeight
             ) ;           
@@ -74,7 +74,7 @@ struct point search(unsigned char * img ,  unsigned int imgWidth,  unsigned int 
 
 
 //tracer le carré rouge (image d'entrée sur 3 canneaux)
-void trace(unsigned char * img, unsigned int imgWidth, unsigned int imgHeight,  struct point pos , unsigned int imgSearchWidth, unsigned int imgSearchHeight){
+void traceRef(unsigned char * img, unsigned int imgWidth, unsigned int imgHeight,  struct point pos , unsigned int imgSearchWidth, unsigned int imgSearchHeight){
  
     for (unsigned int y = 0; y < imgSearchHeight; y++) { 
         unsigned int i =  3 * ((pos.x) + (y+pos.y) * imgWidth);
