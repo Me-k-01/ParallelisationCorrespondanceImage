@@ -7,6 +7,9 @@
 #include "search_ref.h"
 #include "search_openmp.h"
 
+
+
+
 int main (int argc, char *argv[])
 {
     if (argc != 3)
@@ -48,7 +51,7 @@ int main (int argc, char *argv[])
 
 
     double time = omp_get_wtime();
-   
+    /*
     printf("%i , %i \n", inputImgWidth, inputImgHeight);
     unsigned char *greyScaleImg= greyScaleRef(inputImg, inputImgWidth, inputImgHeight);
     unsigned char *greyScaleSearchImg= greyScaleRef(searchImg, searchImgWidth, searchImgHeight);
@@ -69,6 +72,30 @@ int main (int argc, char *argv[])
     unsigned char *saveExample = (unsigned char *)malloc(inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char));
     memcpy( saveExample, inputImg, inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char) );
     traceRef(saveExample,inputImgWidth, inputImgHeight, position, searchImgWidth, searchImgHeight);
+    stbi_write_png("img/save_example.png", inputImgWidth, inputImgHeight, 3, saveExample, inputImgWidth*3);
+    */
+
+    printf("%i , %i \n", inputImgWidth, inputImgHeight);
+    unsigned char *greyScaleImg= greyScaleOpenMP(inputImg, inputImgWidth, inputImgHeight);
+    unsigned char *greyScaleSearchImg= greyScaleOpenMP(searchImg, searchImgWidth, searchImgHeight);
+    
+
+    struct point position = searchOpenMP(
+        greyScaleImg, inputImgWidth, inputImgHeight, 
+        greyScaleSearchImg, searchImgWidth, searchImgHeight
+    );
+    // 29214668.000000
+    // 41969804.000000
+    printf("x: %i, y: %i \n", position.x, position.y);
+    printf("valeur SSD : %li\n", evaluatorOpenMP(position.x, position.y, 
+        greyScaleImg, inputImgWidth, inputImgHeight, 
+        greyScaleSearchImg, searchImgWidth, searchImgHeight
+    ));
+    
+    unsigned char *saveExample = (unsigned char *)malloc(inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char));
+    memcpy( saveExample, inputImg, inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char) );
+
+    traceOpenMP(saveExample,inputImgWidth, inputImgHeight, position, searchImgWidth, searchImgHeight);
     stbi_write_png("img/save_example.png", inputImgWidth, inputImgHeight, 3, saveExample, inputImgWidth*3);
 
     free(greyScaleImg);

@@ -3,12 +3,10 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <stdint.h>
+#include "utils.h"
+
 //#pragma once
 
-struct point{
-    unsigned int x;
-    unsigned int y;
-};
 
 // Passage en niveau de gris
 unsigned char * greyScaleOpenMP( unsigned char * img,  unsigned int width,  unsigned int height);

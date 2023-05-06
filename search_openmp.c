@@ -5,7 +5,7 @@ unsigned char * greyScaleOpenMP( unsigned char * img,  unsigned int width,  unsi
 
     unsigned char *greyScaleImg = (unsigned char *)malloc(width * height * 1* sizeof(unsigned char));
     
-    #pragma omp parallel for
+    #pragma omp parallel for collapse(2)
     for(unsigned int y= 0 ; y<height ; y++){         
         for(unsigned int x=0 ; x<width ; x++) {
 
@@ -22,29 +22,28 @@ unsigned char * greyScaleOpenMP( unsigned char * img,  unsigned int width,  unsi
 
 
 //SSD evaluator
+//lui pas parallélisse car 
 uint64_t evaluatorOpenMP( unsigned int xOffset ,  unsigned int yOffset, 
         unsigned char * img,  unsigned int imgWidth,  unsigned int imgHeight,
-        unsigned char * imgToSearch,  unsigned int imgSearchWidth,  unsigned int imgSearchHeight
+        unsigned char * imgToSearch,  unsigned int imgSearchWidth,  unsigned int imgSearchHeight 
 ) {
     uint64_t sum = 0;
     long int d;
-    #pragma omp parallel 
-    {
-        #pragma omp for reduction(+:sum)
-        for (unsigned int x = 0; x < imgSearchWidth; x++) {
-            for (unsigned int y = 0; y < imgSearchHeight; y++) { 
+   
+    for (unsigned int x = 0; x < imgSearchWidth; x++) {
+        for (unsigned int y = 0; y < imgSearchHeight; y++) { 
 
-                // Index dans img Q
-                unsigned int indexQ = (x + xOffset) + (y + yOffset) * imgWidth; 
-                // Index dans imgToSearch C
-                unsigned int indexC = x + y * imgSearchWidth; 
-                
-                // Calcul de la distance
-                d = img[indexQ] - imgToSearch[indexC];
-                sum += d*d;
-            }
+            // Index dans img Q
+            unsigned int indexQ = (x + xOffset) + (y + yOffset) * imgWidth; 
+            // Index dans imgToSearch C
+            unsigned int indexC = x + y * imgSearchWidth; 
+            
+            // Calcul de la distance
+            d = img[indexQ] - imgToSearch[indexC];
+            sum += d*d;
         }
     }
+    
     return sum;
 }
 
@@ -57,6 +56,7 @@ struct point searchOpenMP(unsigned char * img ,  unsigned int imgWidth,  unsigne
     uint64_t currSSD;
     struct point position;  
 
+    #pragma omp parallel for collapse(2)
     for (unsigned int x = 0; x < imgWidth - imgSearchWidth; x++) {
         for (unsigned int y = 0; y < imgHeight - imgSearchHeight; y++) { 
 
@@ -65,21 +65,63 @@ struct point searchOpenMP(unsigned char * img ,  unsigned int imgWidth,  unsigne
                 imgToSearch, imgSearchWidth, imgSearchHeight
             ) ;           
             //printf("x: %i, y: %i, currSSD : %li \n", x, y, currSSD);
-            if (currSSD <= minSSD) { 
-                minSSD = currSSD;
-                position.x = x;
-                position.y = y;
-            }
+             #pragma omp critical
+            { 
+                if (currSSD <= minSSD) { 
+                    minSSD = currSSD;
+                    position.x = x;
+                    position.y = y;
+                }
+            } 
         }
     }
     return position;
 }
+/*
+ //un poil moin bien sur space
+// Recherche exaustive dans l'image
+struct point searchOpenMP(unsigned char * img ,  unsigned int imgWidth,  unsigned int imgHeight, unsigned char * imgToSearch,  unsigned int imgSearchWidth,  unsigned int imgSearchHeight){
 
+    // Comparer "imgToSearch" -> C avec l'ensemble des sous images de "img" -> Q
+
+    uint64_t minSSD = UINT64_MAX ; 
+    uint64_t currSSD;
+    struct point position;  
+
+    #pragma omp parallel
+    #pragma omp single
+    {   
+    for (unsigned int x = 0; x < imgWidth - imgSearchWidth; x++) {
+        for (unsigned int y = 0; y < imgHeight - imgSearchHeight; y++) { 
+            
+           #pragma omp task
+          {  
+            currSSD = evaluatorOpenMP(x, y, 
+                img, imgWidth, imgHeight, 
+                imgToSearch, imgSearchWidth, imgSearchHeight
+            ) ;           
+            //printf("x: %i, y: %i, currSSD : %li \n", x, y, currSSD);
+             #pragma omp critical
+            { 
+                if (currSSD <= minSSD) { 
+                    minSSD = currSSD;
+                    position.x = x;
+                    position.y = y;
+                }
+            } 
+          } 
+        }
+    }
+    } 
+    return position;
+}
+*/
 
 //tracer le carré rouge (image d'entrée sur 3 canneaux)
 void traceOpenMP(unsigned char * img, unsigned int imgWidth, unsigned int imgHeight,  struct point pos , unsigned int imgSearchWidth, unsigned int imgSearchHeight){
  
-    for (unsigned int y = 0; y < imgSearchHeight; y++) { 
+    #pragma omp parallel for 
+    for (unsigned int y = 0; y <= imgSearchHeight; y++) { 
         unsigned int i =  3 * ((pos.x) + (y+pos.y) * imgWidth);
         img[i]   = 255;
         img[i+1] = 0;
@@ -90,13 +132,14 @@ void traceOpenMP(unsigned char * img, unsigned int imgWidth, unsigned int imgHei
         img[j+2] = 0;
     }
    
-    for (unsigned int x = 0; x < imgSearchWidth; x++) {
+    #pragma omp parallel for 
+    for (unsigned int x = 0; x <=imgSearchWidth; x++) {
         unsigned int i =  3 * ((x+pos.x) + (pos.y) * imgWidth);
         img[i]   = 255;
         img[i+1] = 0;
         img[i+2] = 0;
+        
         unsigned int j =  3 * ((x+pos.x) + (pos.y+imgSearchHeight) * imgWidth);
-
         img[j]   = 255;
         img[j+1] = 0;
         img[j+2] = 0;
