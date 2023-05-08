@@ -102,3 +102,40 @@ void traceRef(unsigned char * img, unsigned int imgWidth, unsigned int imgHeight
 
     
 }
+
+
+
+unsigned char * locateImgRef(unsigned char * inputImg,int inputImgWidth, int inputImgHeight,unsigned char *searchImg, int searchImgWidth, int searchImgHeight ){
+
+
+    printf("%i , %i \n", inputImgWidth, inputImgHeight);
+    unsigned char *greyScaleImg= greyScaleRef(inputImg, inputImgWidth, inputImgHeight);
+    unsigned char *greyScaleSearchImg= greyScaleRef(searchImg, searchImgWidth, searchImgHeight);
+    
+
+    struct point position = searchRef(
+        greyScaleImg, inputImgWidth, inputImgHeight, 
+        greyScaleSearchImg, searchImgWidth, searchImgHeight
+    );
+   
+
+    printf("x: %i, y: %i \n", position.x, position.y);
+    printf("valeur SSD : %li\n", evaluatorRef(position.x, position.y, 
+        greyScaleImg, inputImgWidth, inputImgHeight, 
+        greyScaleSearchImg, searchImgWidth, searchImgHeight
+    ));
+    
+    unsigned char *saveExample = (unsigned char *)malloc(inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char));
+    memcpy( saveExample, inputImg, inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char) );
+    traceRef(saveExample,inputImgWidth, inputImgHeight, position, searchImgWidth, searchImgHeight);
+
+
+    free(greyScaleImg);
+    free(greyScaleSearchImg);
+
+    return saveExample;
+    
+    
+
+
+}

@@ -26,3 +26,7 @@ struct point searchRef(unsigned char * img ,  unsigned int imgWidth,  unsigned i
 
 //tracer le carré rouge 
 void traceRef(unsigned char * img, unsigned int imgWidth, unsigned int imgHeight,  struct point pos , unsigned int imgSearchWidth, unsigned int imgSearchHeight);
+
+
+
+unsigned char * locateImgRef(unsigned char * inputImg,int inputImgWidth, int inputImgHeight,unsigned char *searchImg, int searchImgWidth, int searchImgHeight );

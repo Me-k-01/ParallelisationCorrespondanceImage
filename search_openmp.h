@@ -26,3 +26,7 @@ struct point searchOpenMP(unsigned char * img ,  unsigned int imgWidth,  unsigne
 
 //tracer le carré rouge 
 void traceOpenMP(unsigned char * img, unsigned int imgWidth, unsigned int imgHeight,  struct point pos , unsigned int imgSearchWidth, unsigned int imgSearchHeight);
+
+
+
+unsigned char * locateImgOpenMP(unsigned char * inputImg,int inputImgWidth, int inputImgHeight,unsigned char *searchImg, int searchImgWidth, int searchImgHeight );
