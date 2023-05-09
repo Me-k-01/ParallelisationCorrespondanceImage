@@ -1,4 +1,4 @@
-#include "search_mpi_v1.h"
+#include "search_mpi_v2.h"
 
 // Passage en niveau de gris
 unsigned char * greyScaleMPI( unsigned char * img,  unsigned int width,  unsigned int height){

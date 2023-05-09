@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "search_openmp.h": "c"
+        "search_openmp.h": "c",
+        "stdio.h": "c",
+        "search_ref.h": "c"
     }
 }
