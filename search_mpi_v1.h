@@ -1,12 +1,13 @@
+#ifndef SEARCH_OPENMP
+#define SEARCH_OPENMP
+
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <stdint.h>
 #include "utils.h"
-
-//#pragma once
-
+ 
 
 // Passage en niveau de gris
 unsigned char * greyScaleMPI( unsigned char * img,  unsigned int width,  unsigned int height);
@@ -26,3 +27,5 @@ struct point searchMPI(unsigned char * img ,  unsigned int imgWidth,  unsigned i
 
 //tracer le carré rouge 
 void traceMPI(unsigned char * img, unsigned int imgWidth, unsigned int imgHeight,  struct point pos , unsigned int imgSearchWidth, unsigned int imgSearchHeight);
+
+#endif // SEARCH_OPENMP

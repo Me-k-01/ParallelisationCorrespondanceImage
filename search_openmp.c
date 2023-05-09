@@ -97,7 +97,7 @@ struct point searchOpenMP(unsigned char * img ,  unsigned int imgWidth,  unsigne
             
            #pragma omp task
           {  
-            currSSD = evaluatorOpenMP(x, y, 
+            currSSD = evaluatorRef(x, y, 
                 img, imgWidth, imgHeight, 
                 imgToSearch, imgSearchWidth, imgSearchHeight
             ) ;           

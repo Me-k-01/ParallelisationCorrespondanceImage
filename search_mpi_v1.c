@@ -3,21 +3,20 @@
 // Passage en niveau de gris
 unsigned char * greyScaleMPI( unsigned char * img,  unsigned int width,  unsigned int height){
 
-    unsigned char *greyScaleImg = (unsigned char *)malloc(width * height * 1* sizeof(unsigned char));
+    unsigned char * greyScaleImg = (unsigned char *)malloc(width * height * 1 * sizeof(unsigned char));
     
-    for(unsigned int y= 0 ; y<height ; y++){         
+    for(unsigned int y = 0 ; y<height ; y++){         
         for(unsigned int x=0 ; x<width ; x++) {
 
             unsigned int posGrey = x + y * width ;
             unsigned int posImg = 3 * (x + y * width);
 
-            greyScaleImg[posGrey]= (0.299f*img[posImg])+(0.587f*img[posImg+1])+(0.114f*img[posImg+2]);
+            greyScaleImg[posGrey]= .299f * img[posImg] + .587f * img[posImg+1] + .114f * img[posImg+2];
                   
         }
     }
 
     return greyScaleImg;
-
 }
 
 
@@ -39,7 +38,7 @@ uint64_t evaluatorMPI( unsigned int xOffset ,  unsigned int yOffset,
             
             // Calcul de la distance
             d = img[indexQ] - imgToSearch[indexC];
-            sum += d*d;
+            sum += d*d; // Distance au carré
         }
     }
     return sum;
@@ -97,8 +96,5 @@ void traceMPI(unsigned char * img, unsigned int imgWidth, unsigned int imgHeight
         img[j]   = 255;
         img[j+1] = 0;
         img[j+2] = 0;
-        
-    }
-
-    
+    }    
 }
