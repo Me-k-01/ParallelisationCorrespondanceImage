@@ -130,11 +130,16 @@ int master(int world_size, int argc, char *argv[]) {
 
         // On effectue le travail
         
-        uint64_t currMin = evaluatorRef(greyInputImg , inputImgWidth, inputImgHeight, searchImg, searchImgWidth, searchImgHeight);
+        uint64_t currMin = evaluatorRef(x, y, greyInputImg , inputImgWidth, inputImgHeight, searchImg, searchImgWidth, searchImgHeight);
         if (min > currMin) {
             min = currMin;
             xBest = x;
             yBest = y;
+        }
+        x ++;
+        if (x > inputImgWidth - searchImgWidth) {
+            y ++;
+            x = 0;
         }
     }  
 
@@ -144,17 +149,16 @@ int master(int world_size, int argc, char *argv[]) {
     for (int i = 1; i < world_size; i++){
         int n;
         // On envoie un signal de fin a tout le monde.
-        MPI_send(
+        MPI_Send(
         /* data         = */ &n, 
         /* count        = */ 1, 
         /* datatype     = */ MPI_INT, 
         /* source       = */ i, 
-        /* tag          = */ MPI_ANY_TAG, 
-        /* communicator = */ MPI_COMM_WORLD,  
-        /* status       = */ msgType.END 
+        /* tag          = */ END, 
+        /* communicator = */ MPI_COMM_WORLD
         );
         
-        uint64_t * result = (uint64_t *)malloc();  // [x, y, minSSD]
+        uint64_t * result = (uint64_t *)malloc(3 * sizeof(uint64_t));  // [x, y, minSSD]
         // Et on attends leurs réponse individuel
         MPI_Recv(
         /* data         = */ &result, 
@@ -174,7 +178,7 @@ int master(int world_size, int argc, char *argv[]) {
         }
     }
     
-    MPI_finalize();
+    MPI_Finalize();
 
     struct point position;
     position.x = xBest;
@@ -184,8 +188,8 @@ int master(int world_size, int argc, char *argv[]) {
     traceRef(saveExample,inputImgWidth, inputImgHeight, position, searchImgWidth, searchImgHeight);
 
 
-    free(greyScaleImg);
-    free(greyScaleSearchImg);
+    free(greyInputImg);
+    free(greySearchImg);
 
 
     //void traceRef(unsigned char * img, unsigned int imgWidth, unsigned int imgHeight,  struct point pos , unsigned int imgSearchWidth, unsigned int imgSearchHeight);
@@ -220,9 +224,10 @@ void client() {
     unsigned int searchImgHeight = sizes[3];
 
     ////////////////// On reçoit les images 
-    unsigned char * imageInput, imageSearch; 
+    unsigned char * inputImg;
+    unsigned char * searchImg; 
     MPI_Recv(
-    /* data         = */ &imageInput, 
+    /* data         = */ &inputImg, 
     /* count        = */ inputImgWidth * inputImgHeight, 
     /* datatype     = */ MPI_INT, 
     /* source       = */ 0, 
@@ -231,7 +236,7 @@ void client() {
     /* status       = */ MPI_STATUS_IGNORE
     );
     MPI_Recv(
-    /* data         = */ &imageSearch, 
+    /* data         = */ &searchImg, 
     /* count        = */ searchImgWidth * searchImgHeight, 
     /* datatype     = */ MPI_INT, 
     /* source       = */ 0, 
@@ -243,15 +248,15 @@ void client() {
     
     MPI_Status status; 
     unsigned int * coords = (unsigned int *)malloc(2 * sizeof(unsigned int));
-    uint64_t * result = (uint64_t *)malloc();  // [x, y, minSSD]
+    uint64_t * result = (uint64_t *)malloc(3 * sizeof(uint64_t));  // [x, y, minSSD]
     result[2] = UINT64_MAX;
 
-    MPI_Recv(coords, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, &status); // Reçoit au plus deux coordonnées.    
+    MPI_Recv(&coords, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, &status); // Reçoit au plus deux coordonnées.    
     // Lorsqu'on reçoit du travail du master
-    if (status.MPI_TAG == msgType.DATA) { 
+    if (status.MPI_TAG == DATA) { 
         // On traite le travail
-        int x = coords[0]; int y = coords[1];
-        uint64_t currMin = evaluatorRef(img , imgWidth, imgHeight, imgToSearch, imgSearchWidth, imgSearchHeight);
+        unsigned int x = coords[0]; unsigned int y = coords[1];
+        uint64_t currMin = evaluatorRef(x, y, inputImg , inputImgWidth, inputImgHeight, searchImg, searchImgWidth, searchImgHeight);
         // On stocke l'évaluation du SSD dans un minimum
         if (currMin < result[2] ) {
           result[0] = x;
@@ -260,7 +265,7 @@ void client() {
         }
         // Et on demande au master le reste du travail
         MPI_Send(0, 1, MPI_INT, 0, 0, MPI_COMM_WORLD); 
-    } else { // status.MPI_TAG == msgType.END
+    } else { // status.MPI_TAG == END
         // Ou lorsque l'on reçoit le signal de fin, on envoie notre résultat (les machines qui n'ont pas travailler renvoit FLOAT_MAX)
         MPI_Send(&result, 3, MPI_INT, 0, 0, MPI_COMM_WORLD); 
     }
