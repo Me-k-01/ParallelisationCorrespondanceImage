@@ -5,7 +5,7 @@ gcc -fopenmp -Wall -o main main.c search_openmp.c search_ref.c -lm
 ```
 - MPI :
 ```
-mpicc -o ./main_mpi ./main_mpi_v1
+mpicc -o ./main_mpi ./main_mpi_v1.c ./search_ref.c -fopenmp -lm
 ```
 
 ## Commande d'execution
