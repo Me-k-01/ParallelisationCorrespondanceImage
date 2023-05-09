@@ -1,28 +1,27 @@
 #include "search_openmp.h"
+#include "search_ref.h"
 
-// Passage en niveau de gris
+// Passage de l'image en niveau de gris
 unsigned char * greyScaleOpenMP( unsigned char * img,  unsigned int width,  unsigned int height){
 
     unsigned char *greyScaleImg = (unsigned char *)malloc(width * height * 1* sizeof(unsigned char));
     
     #pragma omp parallel for collapse(2)
-    for(unsigned int y= 0 ; y<height ; y++){         
-        for(unsigned int x=0 ; x<width ; x++) {
+    for(unsigned int y = 0 ; y < height ; y++){         
+        for(unsigned int x = 0 ; x < width ; x++) {
 
             unsigned int posGrey = x + y * width ;
             unsigned int posImg = 3 * (x + y * width);
 
-            greyScaleImg[posGrey]= .299f * img[posImg] + .587f * img[posImg+1] + .114f * img[posImg+2];
-                  
+            greyScaleImg[posGrey] = .299f * img[posImg] + .587f * img[posImg+1] + .114f * img[posImg+2];                 
         }
     }
     return greyScaleImg;
 }
 
 
-
 //SSD evaluator
-//lui pas parallélisse car 
+// On ne l'utilisera pas dans le programme parallelisé selon openmp uniquement, mais il sera utile lorsque nous combinerons mpi et openmp
 uint64_t evaluatorOpenMP( unsigned int xOffset ,  unsigned int yOffset, 
         unsigned char * img,  unsigned int imgWidth,  unsigned int imgHeight,
         unsigned char * imgToSearch,  unsigned int imgSearchWidth,  unsigned int imgSearchHeight 
@@ -30,6 +29,7 @@ uint64_t evaluatorOpenMP( unsigned int xOffset ,  unsigned int yOffset,
     uint64_t sum = 0;
     long int d;
    
+    #pragma omp parallel for collapse(2) reduction(+:sum)
     for (unsigned int x = 0; x < imgSearchWidth; x++) {
         for (unsigned int y = 0; y < imgSearchHeight; y++) { 
 
@@ -60,7 +60,8 @@ struct point searchOpenMP(unsigned char * img ,  unsigned int imgWidth,  unsigne
     for (unsigned int x = 0; x < imgWidth - imgSearchWidth; x++) {
         for (unsigned int y = 0; y < imgHeight - imgSearchHeight; y++) { 
 
-            currSSD = evaluatorOpenMP(x, y, 
+            // On utilise la fonction de reference car on ne peut pas paralleliser les deux à la fois en openmp
+            currSSD = evaluatorRef(x, y, 
                 img, imgWidth, imgHeight, 
                 imgToSearch, imgSearchWidth, imgSearchHeight
             ) ;           
@@ -155,8 +156,7 @@ unsigned char * locateImgOpenMP(unsigned char * inputImg,int inputImgWidth, int 
     printf("%i , %i \n", inputImgWidth, inputImgHeight);
     unsigned char *greyScaleImg= greyScaleOpenMP(inputImg, inputImgWidth, inputImgHeight);
     unsigned char *greyScaleSearchImg= greyScaleOpenMP(searchImg, searchImgWidth, searchImgHeight);
-    
-
+     
     struct point position = searchOpenMP(
         greyScaleImg, inputImgWidth, inputImgHeight, 
         greyScaleSearchImg, searchImgWidth, searchImgHeight

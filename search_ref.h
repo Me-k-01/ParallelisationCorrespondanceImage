@@ -1,3 +1,6 @@
+#ifndef SEARCH_REF
+#define SEARCH_REF
+
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,8 +8,7 @@
 #include <stdint.h>
 #include "utils.h"
 
-//#pragma once
-
+//#pragma once 
 
 // Passage en niveau de gris
 unsigned char * greyScaleRef( unsigned char * img,  unsigned int width,  unsigned int height);
@@ -30,3 +32,5 @@ void traceRef(unsigned char * img, unsigned int imgWidth, unsigned int imgHeight
 
 
 unsigned char * locateImgRef(unsigned char * inputImg,int inputImgWidth, int inputImgHeight,unsigned char *searchImg, int searchImgWidth, int searchImgHeight );
+
+#endif // SEARCH_REF

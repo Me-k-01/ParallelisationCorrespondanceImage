@@ -63,7 +63,7 @@ int main (int argc, char *argv[])
     
     time = omp_get_wtime()-time;
 
-    printf("Good bye! time taken : %f s \n",time);
+    printf("Time taken : %f s \n",time);
 
     return EXIT_SUCCESS;
 }

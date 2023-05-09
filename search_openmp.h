@@ -1,3 +1,6 @@
+#ifndef SEARCH_OPENMP
+#define SEARCH_OPENMP
+
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,3 +33,5 @@ void traceOpenMP(unsigned char * img, unsigned int imgWidth, unsigned int imgHei
 
 
 unsigned char * locateImgOpenMP(unsigned char * inputImg,int inputImgWidth, int inputImgHeight,unsigned char *searchImg, int searchImgWidth, int searchImgHeight );
+
+#endif // SEARCH_OPENMP
