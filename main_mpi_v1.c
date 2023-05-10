@@ -102,25 +102,25 @@ int master(int world_size, int argc, char *argv[]) {
             // On regarde si le client nous a demander un travail
             //printf("machine %i \n",i);
             int askForTask = MPI_Irecv(
-            /* data         = */ &_, 
-            /* count        = */ 1, 
-            /* datatype     = */ MPI_INT, 
-            /* source       = */ i, 
-            /* tag          = */ 0, 
-            /* communicator = */ MPI_COMM_WORLD,  
-                                & req
+                &_, // data
+                1,  // count
+                MPI_INT, // datatype
+                i, // source
+                0, // tag
+                MPI_COMM_WORLD, // communicator
+                & req // request
             );
-           // int askForTask = 0;
-           // MPI_Test(&req, &askForTask, &status);
+            // int askForTask = 0;
+            // MPI_Test(&req, &askForTask, &status);
             // Si on a pas de demande de la par du client, on skip cette machine
             if (askForTask!=0){
                 //printf(" machine %i is busy \n",i);
                 continue;
             }
-            printf("Client %i has asked for task.\n",i);
+            //printf("Client %i has asked for task.\n",i);
             
             // On verifie qu'il nous reste du travail
-            if (x >= inputImgWidth - searchImgWidth && y >= inputImgHeight - searchImgHeight) 
+            if (x+1 >= inputImgWidth - searchImgWidth && y >= inputImgHeight - searchImgHeight) 
                 break; // Ça nous sort de toutes les boucles quand on y pense
             
             
@@ -128,7 +128,7 @@ int master(int world_size, int argc, char *argv[]) {
             /*unsigned int * coords = (unsigned int *)malloc(2 * sizeof(unsigned int));
             coords[0] = x; coords[1] = y;*/
             unsigned int coords[2] = {x, y};
-            printf("Send to machine %i \n",i);
+            //printf("Send to machine %i \n",i);
             MPI_Send(&coords, 2, MPI_UNSIGNED, i, DATA, MPI_COMM_WORLD);
             
             x ++;
@@ -136,9 +136,10 @@ int master(int world_size, int argc, char *argv[]) {
                 y ++;
                 x = 0;
             } 
+            
         }   
         // On revérifie qu'il nous reste du travail
-        if ((x >= inputImgWidth - searchImgWidth) && (y >= inputImgHeight - searchImgHeight)) 
+        if ((x+1 >= inputImgWidth - searchImgWidth) && (y >= inputImgHeight - searchImgHeight)) 
             break;
 
         // On effectue le travail        
@@ -149,12 +150,13 @@ int master(int world_size, int argc, char *argv[]) {
             min   = currMin;
         }
         //printf("x : %i, y : %i\n", x, y);
-        // On passe au prochain travail 
-        if (x > inputImgWidth - searchImgWidth) {
+        // On passe au prochain travail
+        x ++;  
+        if (x >= inputImgWidth - searchImgWidth) {
             y ++;
             x = 0;
-        }
-        x ++;
+        } 
+        
     }  
 
     printf("Ending...\n");
@@ -247,6 +249,7 @@ void client(int world_rank) {
  
 
     MPI_Status status; 
+    MPI_Request req; 
     unsigned int * coords = (unsigned int *)malloc(2 * sizeof(unsigned int));
     uint64_t * result = (uint64_t *)malloc(3 * sizeof(uint64_t));  // [x, y, minSSD]
     result[2] = UINT64_MAX; // localMin = Infinity
@@ -254,14 +257,14 @@ void client(int world_rank) {
     int _=0;
     // Tant qu'il y a du travail
     while (1) {
-        printf("- Client ask for task\n");
+        //printf("- Client ask for task\n");
         // On demande au master le reste du travail
-        MPI_Send(&_, 1, MPI_INT, 0, 0, MPI_COMM_WORLD); 
+        MPI_Isend(&_, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &req); 
         
         MPI_Recv(coords, 2, MPI_UNSIGNED, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status); // Reçoit au plus deux coordonnées.  
         // Lorsqu'on reçoit du travail du master
         if (status.MPI_TAG == DATA) { 
-            printf("- Client : %i has received a coordinate\n", world_rank);   
+            //printf("- Client : %i has received a coordinate\n", world_rank);   
             // On traite le travail
             unsigned int x = coords[0]; unsigned int y = coords[1];
             uint64_t currMin = evaluatorRef(x, y, inputImg , inputImgWidth, inputImgHeight, searchImg, searchImgWidth, searchImgHeight);
