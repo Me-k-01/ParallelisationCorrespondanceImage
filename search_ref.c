@@ -3,7 +3,7 @@
 // Passage en niveau de gris
 unsigned char * greyScaleRef( unsigned char * img,  unsigned int width,  unsigned int height){
 
-    unsigned char *greyScaleImg = (unsigned char *)malloc(width * height * 1* sizeof(unsigned char));
+    unsigned char * greyScaleImg = (unsigned char *)malloc(width * height * 1 * sizeof(unsigned char));
     
     for(unsigned int y= 0 ; y<height ; y++){         
         for(unsigned int x=0 ; x<width ; x++) {
@@ -17,7 +17,6 @@ unsigned char * greyScaleRef( unsigned char * img,  unsigned int width,  unsigne
     }
 
     return greyScaleImg;
-
 }
 
 
@@ -109,8 +108,8 @@ unsigned char * locateImgRef(unsigned char * inputImg,int inputImgWidth, int inp
 
 
     printf("%i , %i \n", inputImgWidth, inputImgHeight);
-    unsigned char *greyScaleImg= greyScaleRef(inputImg, inputImgWidth, inputImgHeight);
-    unsigned char *greyScaleSearchImg= greyScaleRef(searchImg, searchImgWidth, searchImgHeight);
+    unsigned char *greyScaleImg       = greyScaleRef(inputImg, inputImgWidth, inputImgHeight);
+    unsigned char *greyScaleSearchImg = greyScaleRef(searchImg, searchImgWidth, searchImgHeight);
     
 
     struct point position = searchRef(

@@ -6,9 +6,10 @@
 //////////////////////////////////
 #include <mpi.h>
 #include <stdio.h> 
-//#include <stdlib.h>
-#include "search_ref.h" 
+//#include <stdlib.h> 
+#include "search_openmp.h"
 #include "utils.h"
+#include <omp.h>
 
 enum msgType { DATA, END }; 
 
@@ -46,11 +47,10 @@ int master(int world_size, int argc, char *argv[]) {
     printf("Search image %s: %dx%d\n", searchImgPath, searchImgWidth, searchImgHeight);
 
 
-   
     
     // ==================================== Envoie du travail
-    unsigned char * greyInputImg  = greyScaleRef(inputImg,  inputImgWidth, inputImgHeight);
-    unsigned char * greySearchImg = greyScaleRef(searchImg, searchImgWidth , searchImgHeight);            
+    unsigned char * greyInputImg  = greyScaleOpenMP(inputImg,  inputImgWidth, inputImgHeight);
+    unsigned char * greySearchImg = greyScaleOpenMP(searchImg, searchImgWidth , searchImgHeight);            
 
     /*
     unsigned int * sizes = (unsigned int *)malloc( 4*sizeof(unsigned int) ); 
@@ -143,7 +143,7 @@ int master(int world_size, int argc, char *argv[]) {
             break;
 
         // On effectue le travail        
-        uint64_t currMin = evaluatorRef(x, y, greyInputImg , inputImgWidth, inputImgHeight, greySearchImg, searchImgWidth, searchImgHeight);
+        uint64_t currMin = evaluatorOpenMP(x, y, greyInputImg , inputImgWidth, inputImgHeight, greySearchImg, searchImgWidth, searchImgHeight);
         if (min > currMin) { 
             xBest = x;
             yBest = y;
@@ -203,7 +203,7 @@ int master(int world_size, int argc, char *argv[]) {
     position.y = yBest;
     unsigned char *saveExample = (unsigned char *)malloc(inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char));
     memcpy(saveExample, inputImg, inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char) );
-    traceRef(saveExample,inputImgWidth, inputImgHeight, position, searchImgWidth, searchImgHeight);
+    traceOpenMP(saveExample,inputImgWidth, inputImgHeight, position, searchImgWidth, searchImgHeight);
 
 
     free(greyInputImg);
@@ -228,7 +228,7 @@ int master(int world_size, int argc, char *argv[]) {
 void client(int world_rank) {
     ////////////////// On reçoit les tailles des images
     unsigned int * sizes = (unsigned int *)malloc(4 * sizeof(unsigned int));
-    sizes[0] = 0; sizes[1] = 0; sizes[2] = 0; sizes[3]=0;
+    sizes[0]=0; sizes[1]=0; sizes[2] = 0; sizes[3]=0;
 
     MPI_Bcast(sizes, 4, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
 
@@ -267,7 +267,7 @@ void client(int world_rank) {
             //printf("- Client : %i has received a coordinate\n", world_rank);   
             // On traite le travail
             unsigned int x = coords[0]; unsigned int y = coords[1];
-            uint64_t currMin = evaluatorRef(x, y, inputImg , inputImgWidth, inputImgHeight, searchImg, searchImgWidth, searchImgHeight);
+            uint64_t currMin = evaluatorOpenMP(x, y, inputImg , inputImgWidth, inputImgHeight, searchImg, searchImgWidth, searchImgHeight);
             // On stocke l'évaluation du SSD dans un minimum
             if (currMin < result[2] ) {
             result[0] = x;
