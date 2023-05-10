@@ -6,11 +6,32 @@
 //////////////////////////////////
 #include <mpi.h>
 #include <stdio.h> 
-#include <omp.h>
-//#include <stdlib.h>
+#include <stdlib.h>
+#include <omp.h>   
 #include "search_ref.h"  
 #include "utils.h"
 
+ typedef struct pointSSDStruct {
+    uint64_t value; 
+    unsigned int x;
+    unsigned int y;
+} pointSSD;
+
+
+void minPointSSD(void *in, void *inout, int *len, MPI_Datatype *type){ 
+    pointSSD *invals    = in;
+    pointSSD *inoutvals = inout;
+
+    for (int i=0; i<*len; i++) {
+        if (invals[i].value < inoutvals[i].value) {
+            inoutvals[i].value  = invals[i].value;
+            inoutvals[i].x = invals[i].x;
+            inoutvals[i].y = invals[i].y;
+        }
+    }
+
+    return;
+}
 
 int main(int argc, char *argv[]) {
     // On verifie que nous avons les chemins des images.
@@ -28,7 +49,7 @@ int main(int argc, char *argv[]) {
     unsigned int sizes[4];
  
     ////////////////////// Chargement de l'image sur la machine principale //////////////////////
-    unsigned char * greyInputImg; unsigned char * greySearchImg;
+    unsigned char * inputImg; unsigned char * greyInputImg; unsigned char * greySearchImg; 
     if (worldRank == 0) {  
         printf("Starting...\n");
 
@@ -40,7 +61,7 @@ int main(int argc, char *argv[]) {
         int inputImgWidth;
         int inputImgHeight;
         int dummyNbChannels; // number of channels forced to 3 in stb_load.
-        unsigned char * inputImg = stbi_load(inputImgPath, &inputImgWidth, &inputImgHeight, &dummyNbChannels, 3);
+        inputImg = stbi_load(inputImgPath, &inputImgWidth, &inputImgHeight, &dummyNbChannels, 3);
         if (inputImg == NULL)
         {
             printf("Cannot load image %s", inputImgPath);
@@ -69,8 +90,7 @@ int main(int argc, char *argv[]) {
         sizes[2] = searchImgWidth;
         sizes[3] = searchImgHeight; 
 
-        // Plus besoin des images originaux. 
-        stbi_image_free(inputImg); 
+        // Plus besoin de l'image de recherche original.  
         stbi_image_free(searchImg); 
     } 
     
@@ -92,8 +112,7 @@ int main(int argc, char *argv[]) {
       
     // On broadcast les deux images
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Bcast(greyInputImg, inputWidth * inputHeight, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
-    printf("Chargement 1\n");
+    MPI_Bcast(greyInputImg, inputWidth * inputHeight, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD); 
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(greySearchImg, searchWidth * searchHeight, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD); 
     
@@ -101,8 +120,7 @@ int main(int argc, char *argv[]) {
     double time = omp_get_wtime();
  
 
-    ////////////////////// Traitement //////////////////////
-    printf("Traitement\n");
+    ////////////////////// Traitement ////////////////////// 
     uint64_t minSSD = UINT64_MAX ;  
     struct point bestPosition;  
    
@@ -110,8 +128,9 @@ int main(int argc, char *argv[]) {
     // TODO 
 
     // Découpe de l'image suivant le world rank (par rapport à l'axe primaire)
-    unsigned int offset = worldRank * worldSize;
-    for (unsigned int x = offset; x < offset + (inputWidth - searchWidth) / worldSize; x++) {
+    unsigned int chunk = (inputWidth - searchWidth) / worldSize;
+    unsigned int offset = worldRank * chunk;
+    for (unsigned int x = offset; x <  offset + chunk; x++) {
         // On fait la recherche en séquentielle sur l'axe secondaire
         for (unsigned int y = 0; y < inputHeight - searchHeight; y++) { 
 
@@ -128,43 +147,63 @@ int main(int argc, char *argv[]) {
         }
     } 
 
-    ////////////////////// Récuperation des données //////////////////////
-    printf("Reduction\n");
-    // Reduction pour le obtenir le min
-    unsigned int localRes[2] = {(int)minSSD, worldRank}; 
-    int globalRes[2]; 
-    MPI_Reduce(localRes, globalRes, 1, MPI_UNSIGNED, MPI_MINLOC, 0, MPI_COMM_WORLD); // Min_Loc n'existe pas pour unsigned long
-     
-    unsigned int bestPos[2] = {bestPosition.x, bestPosition.y};
-    MPI_Send(bestPos, 2, MPI_UNSIGNED, 1, 0, MPI_COMM_WORLD); // Le master s'enverra l'info a lui même dans le cas ou c'est lui qui possède la meilleurs réponse
-     
-    if (worldRank == 0) {
-        // Le master recupère la meilleur position uniquement de celui qui est meilleurs
-        unsigned int bestPos[2];
-        MPI_Recv(
-            bestPos,          // data
-            2,                // count
-            MPI_UNSIGNED,     // datatype
-            globalRes[1],     // source
-            0,                // tag 
-            MPI_COMM_WORLD,   // communicator
-            MPI_STATUS_IGNORE // status
-        );
-        bestPosition.x = bestPos[0];
-        bestPosition.y = bestPos[1];
+    ////////////////////// Récuperation des données ////////////////////// 
+    // Reduction pour le obtenir le min 
 
-        printf("Received best position : %i, %i\n", bestPos[0], bestPos[1]);
+    // Thanks to https://stackoverflow.com/questions/9285442/mpi-get-processor-with-minimum-value
+    /* create our new data type */
+    MPI_Datatype mpiPointSSD;
+    MPI_Datatype types[3] = { MPI_UNSIGNED_LONG, MPI_UNSIGNED, MPI_UNSIGNED };
+    MPI_Aint disps[3] = { 
+        offsetof(pointSSD, value),
+        offsetof(pointSSD, x),
+        offsetof(pointSSD, y),  
+    };
+    int lens[3] = {1,1,1};
+    MPI_Type_create_struct(3, lens, disps, types, &mpiPointSSD);
+    MPI_Type_commit(&mpiPointSSD);
+
+    /* create our operator */
+    MPI_Op mpiMinPointSSD;
+    MPI_Op_create(minPointSSD, 1, &mpiMinPointSSD);
+
+
+    pointSSD localRes;
+    pointSSD globalRes;
+    localRes.value = minSSD;
+    localRes.x = bestPosition.x;
+    localRes.y = bestPosition.y;
+
+    //printf("localRes.value : %li, localRes.x,y : %i, %i\n", localRes.value, localRes.x, localRes.y);
+    //MPI_Barrier(MPI_COMM_WORLD);  // synchronize all processes
+    MPI_Reduce(&localRes, &globalRes, // Reduction des locaux vers le global
+        1,             // count
+        mpiPointSSD,   // datatype
+        mpiMinPointSSD,     // operation
+        0,             // destination
+        MPI_COMM_WORLD // root
+    ); // Min_Loc n'existe pas pour unsigned long
+ 
+ 
+    if (worldRank == 0) {  
+        printf("Received best position : %li, %i, %i\n", globalRes.value, globalRes.x, globalRes.y);
+        bestPosition.x = globalRes.x;
+        bestPosition.y = globalRes.y;
+ 
 
         // Et il calcul l'image final
         unsigned char * resultImg = (unsigned char *)malloc(inputWidth * inputHeight * 3 * sizeof(unsigned char));
-        memcpy(resultImg, greyInputImg, inputWidth * inputHeight * 3 * sizeof(unsigned char) );
+        memcpy(resultImg, inputImg, inputWidth * inputHeight * 3 * sizeof(unsigned char) );
         traceRef(resultImg, inputWidth, inputHeight, bestPosition, searchWidth, searchHeight);
  
         stbi_write_png("img/save_example.png", inputWidth, inputHeight, 3, resultImg, inputWidth * 3);
         printf("Time taken : %f s \n", omp_get_wtime()-time);
+        stbi_image_free(inputImg); 
     }
 
      
+    MPI_Op_free(&mpiMinPointSSD);
+    MPI_Type_free(&mpiPointSSD); 
     free(greyInputImg);
     free(greySearchImg);
     
