@@ -21,4 +21,4 @@ mpirun -np 1 -host fst-o-i-212-02.unilim.fr ./main_mpi ./img/beach.png ./img/goa
 
 
 
-mpicc -o ./main_mpi ./main_openmp_mpi.c ./search_openmp.c ./search_ref.c -fopenmp -lm && mpirun -np 2 -host fst-o-i-212-02.unilim.fr,fst-o-i-212-05.unilim.fr ./main_mpi ./img/space.png ./img/goat.png
+mpicc -O3 -o ./main_mpi ./main_openmp_mpi.c ./search_openmp.c ./search_ref.c -fopenmp -lm && mpirun -np 2 -host fst-o-i-212-02.unilim.fr,fst-o-i-212-05.unilim.fr ./main_mpi ./img/space.png ./img/goat.png

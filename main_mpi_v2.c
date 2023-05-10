@@ -61,8 +61,8 @@ int main(int argc, char *argv[]) {
 
         
         // ====================================  Passage en noir et blanc.
-        unsigned char * greyInputImg  = greyScaleRef(inputImg,  inputImgWidth, inputImgHeight);
-        unsigned char * greySearchImg = greyScaleRef(searchImg, searchImgWidth , searchImgHeight);            
+        greyInputImg  = greyScaleRef(inputImg,  inputImgWidth, inputImgHeight);
+        greySearchImg = greyScaleRef(searchImg, searchImgWidth , searchImgHeight);            
     
         sizes[0] = inputImgWidth;
         sizes[1] = inputImgHeight;
@@ -91,8 +91,10 @@ int main(int argc, char *argv[]) {
     } 
       
     // On broadcast les deux images
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(greyInputImg, inputWidth * inputHeight, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
-    printf("MPI_Bcast\n");
+    printf("Chargement 1\n");
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(greySearchImg, searchWidth * searchHeight, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD); 
     
     // Démarage du timer avant le traitement
@@ -129,33 +131,31 @@ int main(int argc, char *argv[]) {
     ////////////////////// Récuperation des données //////////////////////
     printf("Reduction\n");
     // Reduction pour le obtenir le min
-    uint64_t localRes[2] = {minSSD, worldRank}; 
+    unsigned int localRes[2] = {(int)minSSD, worldRank}; 
     int globalRes[2]; 
-    MPI_Reduce(localRes, globalRes, 1, MPI_UNSIGNED_LONG, MPI_MINLOC, 0, MPI_COMM_WORLD);
-    // On renvoit la position au master
-    /*
-    if (worldRank == globalRes[1]) {
-        uint64_t bestPos[2] = {bestPosition.x, bestPosition.y};
-        MPI_Send(bestPos, 2, MPI_UNSIGNED_LONG, 1, 0, MPI_COMM_WORLD); 
-    } else 
-    */
-    uint64_t bestPos[2] = {bestPosition.x, bestPosition.y};
-    MPI_Send(bestPos, 2, MPI_UNSIGNED_LONG, 1, 0, MPI_COMM_WORLD); // Le master s'enverra l'info a lui même dans le cas ou c'est lui qui possède la meilleurs réponse
-    
-    // Le master recupère la meilleur position uniquement de celui qui est meilleurs
+    MPI_Reduce(localRes, globalRes, 1, MPI_UNSIGNED, MPI_MINLOC, 0, MPI_COMM_WORLD); // Min_Loc n'existe pas pour unsigned long
+     
+    unsigned int bestPos[2] = {bestPosition.x, bestPosition.y};
+    MPI_Send(bestPos, 2, MPI_UNSIGNED, 1, 0, MPI_COMM_WORLD); // Le master s'enverra l'info a lui même dans le cas ou c'est lui qui possède la meilleurs réponse
+     
     if (worldRank == 0) {
-        uint64_t bestPos[2];
+        // Le master recupère la meilleur position uniquement de celui qui est meilleurs
+        unsigned int bestPos[2];
         MPI_Recv(
             bestPos,          // data
             2,                // count
-            MPI_UNSIGNED_LONG,// datatype
+            MPI_UNSIGNED,     // datatype
             globalRes[1],     // source
             0,                // tag 
             MPI_COMM_WORLD,   // communicator
             MPI_STATUS_IGNORE // status
         );
-        printf("Received best position : %li, %li\n", bestPos[0], bestPos[1]);
-        // Fin 
+        bestPosition.x = bestPos[0];
+        bestPosition.y = bestPos[1];
+
+        printf("Received best position : %i, %i\n", bestPos[0], bestPos[1]);
+
+        // Et il calcul l'image final
         unsigned char * resultImg = (unsigned char *)malloc(inputWidth * inputHeight * 3 * sizeof(unsigned char));
         memcpy(resultImg, greyInputImg, inputWidth * inputHeight * 3 * sizeof(unsigned char) );
         traceRef(resultImg, inputWidth, inputHeight, bestPosition, searchWidth, searchHeight);

@@ -205,10 +205,8 @@ int master(int world_size, int argc, char *argv[]) {
     memcpy(saveExample, inputImg, inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char) );
     traceRef(saveExample,inputImgWidth, inputImgHeight, position, searchImgWidth, searchImgHeight);
 
-
     free(greyInputImg);
     free(greySearchImg);
-
 
     //void traceRef(unsigned char * img, unsigned int imgWidth, unsigned int imgHeight,  struct point pos , unsigned int imgSearchWidth, unsigned int imgSearchHeight);
 
