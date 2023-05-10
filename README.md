@@ -16,5 +16,6 @@ mpicc -o ./main_mpi ./main_mpi_v1.c ./search_ref.c -fopenmp -lm
 
 - MPI :
 ```sh
-mpirun -np 1 -host fst-o-i-212-02.unilim.fr ./main_mpi
+mpirun -np 1 -host fst-o-i-212-02.unilim.fr ./main_mpi ./img/beach.png ./img/goat.png
+```
 ```

@@ -15,10 +15,7 @@ enum msgType { DATA, END };
 
 int master(int world_size, int argc, char *argv[]) { 
 
-    if (argc != 3) {
-        printf("Invalid arguments !\n");
-        return EXIT_FAILURE;
-    }
+    
 
     // Get image paths from arguments.
     char * inputImgPath = argv[1];
@@ -57,10 +54,10 @@ int master(int world_size, int argc, char *argv[]) {
 
 
     unsigned int * sizes = (unsigned int *)malloc( 4*sizeof(unsigned int) );
-    sizes[0]=inputImgWidth;
-    sizes[1]=inputImgHeight;
-    sizes[2]=searchImgWidth;
-    sizes[3]=searchImgHeight;
+    sizes[0] = inputImgWidth;
+    sizes[1] = inputImgHeight;
+    sizes[2] = searchImgWidth;
+    sizes[3] = searchImgHeight;
      
     MPI_Bcast(sizes, 4, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     // Broadcast des deux images
@@ -91,10 +88,11 @@ int master(int world_size, int argc, char *argv[]) {
     
     while (1) {  
         // Pour chaques clients
-        for (int i = 1; i < world_size; i++){
-            MPI_Request * req; 
+        for (int i = 1; i < world_size; i++) {
+            MPI_Request req; 
             int _;
             // On regarde si le client nous a demander un travail
+            printf("machine %i \n",i);
             MPI_Irecv(
             /* data         = */ &_, 
             /* count        = */ 1, 
@@ -107,35 +105,44 @@ int master(int world_size, int argc, char *argv[]) {
             int askForTask;
             MPI_Test(&req, &askForTask, &status);
             // Si on a pas de demande de la par du client, on skip cette machine
-            if (! askForTask) { 
+            if (! askForTask){
+                
+                printf(" machine %i is busy \n",i);
                 continue;
+
             }
+            
 
             // On verifie qu'il nous reste du travail
-            if (x < inputImgWidth - searchImgWidth && y < inputImgHeight - searchImgHeight) { 
+            if (x >= inputImgWidth - searchImgWidth && y >= inputImgHeight - searchImgHeight) 
                 break; // Ça nous sort de toutes les boucles quand on y pense
-            }
+            
+            
+            // S'il nous reste du travail on l'envoie au client
+            unsigned int * coords = (unsigned int *)malloc(2 * sizeof(unsigned int));
+            coords[0] = x; coords[1] = y;
+            
+            printf("send to machine %i \n",i);
+            MPI_Send(&coords, 2, MPI_INT, i, DATA, MPI_COMM_WORLD);
+            
             x ++;
             if (x > inputImgWidth - searchImgWidth) {
                 y ++;
                 x = 0;
-            }
-            // S'il nous reste du travail on l'envoie au client
-            unsigned int * data = (unsigned int *)malloc(2 * sizeof(unsigned int));
-            MPI_Send(&data, 2, MPI_INT, i, DATA, MPI_COMM_WORLD);
+            } 
         }   
-        // On reverifie qu'il nous reste du travail
-        if (x < inputImgWidth - searchImgWidth && y < inputImgHeight - searchImgHeight) 
+        // On revérifie qu'il nous reste du travail
+        if (x >= inputImgWidth - searchImgWidth && y >= inputImgHeight - searchImgHeight) 
             break;
 
-        // On effectue le travail
-        
-        uint64_t currMin = evaluatorRef(x, y, greyInputImg , inputImgWidth, inputImgHeight, searchImg, searchImgWidth, searchImgHeight);
+        // On effectue le travail        
+        uint64_t currMin = evaluatorRef(x, y, greyInputImg , inputImgWidth, inputImgHeight, greySearchImg, searchImgWidth, searchImgHeight);
         if (min > currMin) {
             min = currMin;
             xBest = x;
             yBest = y;
         }
+        // On passe au prochain travail
         x ++;
         if (x > inputImgWidth - searchImgWidth) {
             y ++;
@@ -177,8 +184,7 @@ int master(int world_size, int argc, char *argv[]) {
             min = result[2];
         }
     }
-    
-    MPI_Finalize();
+     
 
     struct point position;
     position.x = xBest;
@@ -202,11 +208,10 @@ int master(int world_size, int argc, char *argv[]) {
     time = omp_get_wtime()-time;
 
     printf("Time taken : %f s \n",time);
- 
-    return EXIT_SUCCESS;
+  
 }
 
-void client() {
+void client(int world_rank) {
     ////////////////// On reçoit les tailles des images
     int * sizes;
     MPI_Recv(
@@ -245,13 +250,14 @@ void client() {
     /* status       = */ MPI_STATUS_IGNORE
     ); 
     
-    
+    printf("Image receive on client : %i\n", world_rank);
     MPI_Status status; 
     unsigned int * coords = (unsigned int *)malloc(2 * sizeof(unsigned int));
     uint64_t * result = (uint64_t *)malloc(3 * sizeof(uint64_t));  // [x, y, minSSD]
     result[2] = UINT64_MAX;
 
-    MPI_Recv(&coords, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, &status); // Reçoit au plus deux coordonnées.    
+    MPI_Recv(&coords, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, &status); // Reçoit au plus deux coordonnées. 
+    printf("client : %i has received a coordinate\n", world_rank);   
     // Lorsqu'on reçoit du travail du master
     if (status.MPI_TAG == DATA) { 
         // On traite le travail
@@ -273,7 +279,10 @@ void client() {
 
 
 int main(int argc, char *argv[]) {
- 
+    if (argc != 3) {
+        printf("Invalid arguments !\n");
+        return EXIT_FAILURE;
+    }
     // Initialize the MPI environment
     MPI_Init(NULL, NULL);
     // Find out rank, size
@@ -281,16 +290,17 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-    double time = 0.0 ; 
-
+    double time = 0.0 ;  
+    int status = EXIT_SUCCESS;
+    printf("Starting...\n");
     // Traitement initial de l'image, et repartition du travail
-    if (world_rank = 0) { 
-        return master(world_size, argc, argv);   
+    if (world_rank == 0) {  
+        status = master(world_size, argc, argv);   
     } else { 
-        client();
-    }
-    char direction;
+        client(world_rank);
+    } 
  
+    MPI_Finalize();
     
 
     // Calcul 
