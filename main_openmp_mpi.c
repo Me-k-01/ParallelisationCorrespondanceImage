@@ -16,9 +16,6 @@ enum msgType { DATA, END };
 
 //////////////////////////////////////////////////// MASTER ////////////////////////////////////////////////////
 int master(int world_size, int argc, char *argv[]) { 
-
-    
-
     // Get image paths from arguments.
     char * inputImgPath = argv[1];
     char * searchImgPath = argv[2];
@@ -81,7 +78,7 @@ int master(int world_size, int argc, char *argv[]) {
  
       
     ////////////////////////////////////////////////////
-    // Pseudocode:
+    // En pseudocode:
 
     // On entre dans la boucle de travail
     // Tant qu'il y a du travail a effectuer 
