@@ -7,9 +7,12 @@
 #include <mpi.h>
 #include <stdio.h> 
 //#include <stdlib.h>
+#include <omp.h>   
 #include "search_ref.h" 
+#include "search_openmp.h" 
 #include "utils.h"
 
+#define USE_OPENMP
 enum msgType { DATA, END }; 
 
 
@@ -49,9 +52,13 @@ int master(int world_size, int argc, char *argv[]) {
    
     
     // ==================================== Envoie du travail
-    unsigned char * greyInputImg  = greyScaleRef(inputImg,  inputImgWidth, inputImgHeight);
-    unsigned char * greySearchImg = greyScaleRef(searchImg, searchImgWidth , searchImgHeight);            
-
+    #ifdef USE_OPENMP
+        unsigned char * greyInputImg  = greyScaleOpenMP(inputImg,  inputImgWidth, inputImgHeight);
+        unsigned char * greySearchImg = greyScaleOpenMP(searchImg, searchImgWidth , searchImgHeight);            
+    #else
+        unsigned char * greyInputImg  = greyScaleRef(inputImg,  inputImgWidth, inputImgHeight);
+        unsigned char * greySearchImg = greyScaleRef(searchImg, searchImgWidth , searchImgHeight);            
+    #endif
     /*
     unsigned int * sizes = (unsigned int *)malloc( 4*sizeof(unsigned int) ); 
     //unsigned int sizes[4];
@@ -142,8 +149,12 @@ int master(int world_size, int argc, char *argv[]) {
         if ((x+1 >= inputImgWidth - searchImgWidth) && (y >= inputImgHeight - searchImgHeight)) 
             break;
 
-        // On effectue le travail        
-        uint64_t currMin = evaluatorRef(x, y, greyInputImg , inputImgWidth, inputImgHeight, greySearchImg, searchImgWidth, searchImgHeight);
+        // On effectue le travail     
+        #ifdef USE_OPENMP   
+            uint64_t currMin = evaluatorOpenMP(x, y, greyInputImg , inputImgWidth, inputImgHeight, greySearchImg, searchImgWidth, searchImgHeight);
+        #else
+            uint64_t currMin = evaluatorRef(x, y, greyInputImg , inputImgWidth, inputImgHeight, greySearchImg, searchImgWidth, searchImgHeight);
+        #endif
         if (min > currMin) { 
             xBest = x;
             yBest = y;
@@ -203,13 +214,14 @@ int master(int world_size, int argc, char *argv[]) {
     position.y = yBest;
     unsigned char *saveExample = (unsigned char *)malloc(inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char));
     memcpy(saveExample, inputImg, inputImgWidth * inputImgHeight * 3 * sizeof(unsigned char) );
-    traceRef(saveExample,inputImgWidth, inputImgHeight, position, searchImgWidth, searchImgHeight);
-
+    #ifdef USE_OPENMP
+        traceOpenMP(saveExample,inputImgWidth, inputImgHeight, position, searchImgWidth, searchImgHeight);
+    #else
+        traceRef(saveExample,inputImgWidth, inputImgHeight, position, searchImgWidth, searchImgHeight);
+    #endif
     free(greyInputImg);
     free(greySearchImg);
-
-    //void traceRef(unsigned char * img, unsigned int imgWidth, unsigned int imgHeight,  struct point pos , unsigned int imgSearchWidth, unsigned int imgSearchHeight);
-
+ 
     stbi_write_png("img/save_example.png", inputImgWidth, inputImgHeight, 3, saveExample, inputImgWidth*3);
     
     stbi_image_free(inputImg); 
@@ -265,7 +277,11 @@ void client(int world_rank) {
             //printf("- Client : %i has received a coordinate\n", world_rank);   
             // On traite le travail
             unsigned int x = coords[0]; unsigned int y = coords[1];
-            uint64_t currMin = evaluatorRef(x, y, inputImg , inputImgWidth, inputImgHeight, searchImg, searchImgWidth, searchImgHeight);
+            #ifdef USE_OPENMP
+                uint64_t currMin = evaluatorOpenMP(x, y, inputImg , inputImgWidth, inputImgHeight, searchImg, searchImgWidth, searchImgHeight);
+            #else
+                uint64_t currMin = evaluatorRef(x, y, inputImg , inputImgWidth, inputImgHeight, searchImg, searchImgWidth, searchImgHeight);
+            #endif
             // On stocke l'évaluation du SSD dans un minimum
             if (currMin < result[2] ) {
             result[0] = x;

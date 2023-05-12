@@ -10,8 +10,11 @@
 #include <omp.h>   
 #include "search_ref.h"  
 #include "utils.h"
+#include "search_openmp.h"  
 
- typedef struct pointSSDStruct {
+#define USE_OPENMP
+
+typedef struct pointSSDStruct {
     uint64_t value; 
     unsigned int x;
     unsigned int y;
@@ -82,9 +85,13 @@ int main(int argc, char *argv[]) {
 
         
         // ====================================  Passage en noir et blanc.
-        greyInputImg  = greyScaleRef(inputImg,  inputImgWidth, inputImgHeight);
-        greySearchImg = greyScaleRef(searchImg, searchImgWidth , searchImgHeight);            
-    
+        #ifdef USE_OPENMP
+            greyInputImg  = greyScaleOpenMP(inputImg,  inputImgWidth, inputImgHeight);
+            greySearchImg = greyScaleOpenMP(searchImg, searchImgWidth , searchImgHeight);            
+        #else
+            greyInputImg  = greyScaleRef(inputImg,  inputImgWidth, inputImgHeight);
+            greySearchImg = greyScaleRef(searchImg, searchImgWidth , searchImgHeight);            
+        #endif 
         sizes[0] = inputImgWidth;
         sizes[1] = inputImgHeight;
         sizes[2] = searchImgWidth;
@@ -134,10 +141,18 @@ int main(int argc, char *argv[]) {
         // On fait la recherche en séquentielle sur l'axe secondaire
         for (unsigned int y = 0; y < inputHeight - searchHeight; y++) { 
 
-            uint64_t currSSD = evaluatorRef(x, y, 
-                greyInputImg, inputWidth, inputHeight, 
-                greySearchImg, searchWidth, searchHeight
-            ) ;           
+            #ifdef USE_OPENMP
+                uint64_t currSSD = evaluatorOpenMP(x, y, 
+                    greyInputImg, inputWidth, inputHeight, 
+                    greySearchImg, searchWidth, searchHeight
+                ) ;           
+            #else
+                uint64_t currSSD = evaluatorRef(x, y, 
+                    greyInputImg, inputWidth, inputHeight, 
+                    greySearchImg, searchWidth, searchHeight
+                ) ;     
+            #endif
+            
             //printf("x: %i, y: %i, currSSD : %li \n", x, y, currSSD);
             if (currSSD <= minSSD) {  
                 bestPosition.x = x;
@@ -194,8 +209,11 @@ int main(int argc, char *argv[]) {
         // Et il calcul l'image final
         unsigned char * resultImg = (unsigned char *)malloc(inputWidth * inputHeight * 3 * sizeof(unsigned char));
         memcpy(resultImg, inputImg, inputWidth * inputHeight * 3 * sizeof(unsigned char) );
-        traceRef(resultImg, inputWidth, inputHeight, bestPosition, searchWidth, searchHeight);
- 
+        #ifdef USE_OPEN_MP
+            traceOpenMP(resultImg, inputWidth, inputHeight, bestPosition, searchWidth, searchHeight);
+        #else
+            traceRef(resultImg, inputWidth, inputHeight, bestPosition, searchWidth, searchHeight);
+        #endif 
         stbi_write_png("img/save_example.png", inputWidth, inputHeight, 3, resultImg, inputWidth * 3);
         printf("Time taken : %f s \n", omp_get_wtime()-time);
         stbi_image_free(inputImg); 
