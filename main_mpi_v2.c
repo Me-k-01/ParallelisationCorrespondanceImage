@@ -50,12 +50,13 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &worldRank); 
     MPI_Comm_size(MPI_COMM_WORLD, &worldSize); 
     unsigned int sizes[4];
- 
+    double time=0.0;
     ////////////////////// Chargement de l'image sur la machine principale //////////////////////
     unsigned char * inputImg; unsigned char * greyInputImg; unsigned char * greySearchImg; 
     if (worldRank == 0) {  
         printf("Starting...\n");
-
+        // Démarage du timer avant le traitement
+        time = omp_get_wtime();
         // Get image paths from arguments.
         char * inputImgPath = argv[1];
         char * searchImgPath = argv[2];
@@ -102,7 +103,7 @@ int main(int argc, char *argv[]) {
     } 
     
     ////////////////////// Broadcast //////////////////////
-    printf("Broadcast\n");
+    //printf("Broadcast\n");
     // On envoie de la part du master
     MPI_Bcast(sizes, 4, MPI_UNSIGNED, 0, MPI_COMM_WORLD); 
     unsigned int inputWidth   = sizes[0];
@@ -110,7 +111,7 @@ int main(int argc, char *argv[]) {
     unsigned int searchWidth  = sizes[2];
     unsigned int searchHeight = sizes[3]; 
 
-    printf("sizes: (%i, %i), (%i, %i)\n",inputWidth, inputHeight, searchWidth, searchHeight);
+    //printf("sizes: (%i, %i), (%i, %i)\n",inputWidth, inputHeight, searchWidth, searchHeight);
     // On prépare les machines autres que le master a recevoir l'image
     if (worldRank != 0) {
         greyInputImg  = (unsigned char *)malloc(inputWidth * inputHeight * sizeof(unsigned char));
@@ -118,14 +119,12 @@ int main(int argc, char *argv[]) {
     } 
       
     // On broadcast les deux images
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(greyInputImg, inputWidth * inputHeight, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD); 
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(greySearchImg, searchWidth * searchHeight, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD); 
     
-    // Démarage du timer avant le traitement
-    double time = omp_get_wtime();
- 
+    
 
     ////////////////////// Traitement ////////////////////// 
     uint64_t minSSD = UINT64_MAX ;  
@@ -201,7 +200,7 @@ int main(int argc, char *argv[]) {
  
  
     if (worldRank == 0) {  
-        printf("Received best position : %li, %i, %i\n", globalRes.value, globalRes.x, globalRes.y);
+        //printf("Received best position : %li, %i, %i\n", globalRes.value, globalRes.x, globalRes.y);
         bestPosition.x = globalRes.x;
         bestPosition.y = globalRes.y;
  

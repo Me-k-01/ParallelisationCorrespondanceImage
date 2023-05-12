@@ -49,7 +49,8 @@ int master(int world_size, int argc, char *argv[]) {
     printf("Search image %s: %dx%d\n", searchImgPath, searchImgWidth, searchImgHeight);
 
 
-   
+   // Démarage du timer
+    double time = omp_get_wtime();
     
     // ==================================== Envoie du travail
     #ifdef USE_OPENMP
@@ -77,8 +78,7 @@ int master(int world_size, int argc, char *argv[]) {
     MPI_Bcast(greyInputImg, inputImgWidth * inputImgHeight, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
     MPI_Bcast(greySearchImg, searchImgWidth * searchImgHeight, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
     
-    // Démarage du timer
-    double time = omp_get_wtime();
+    
     // On envoie un travail initial à tout le monde.
     unsigned int x = 0;
     unsigned int y = 0;
@@ -185,7 +185,7 @@ int master(int world_size, int argc, char *argv[]) {
         /* tag          = */ END, 
         /* communicator = */ MPI_COMM_WORLD
         );
-        printf("Sending to client to return the answer\n");
+        //printf("Sending to client to return the answer\n");
         
         uint64_t * result = (uint64_t *)malloc(3 * sizeof(uint64_t));  // [x, y, minSSD]
         // Et on attends leurs réponse individuel
@@ -198,7 +198,7 @@ int master(int world_size, int argc, char *argv[]) {
         /* communicator = */ MPI_COMM_WORLD, 
         /* status       = */ MPI_STATUS_IGNORE
         );
-        printf("Received final answer from client\n");
+        //printf("Received final answer from client\n");
 
         // À chaque réponse, on compare et stocke le meilleurs minimum
         if (result[2] < min) {
@@ -242,7 +242,7 @@ void client(int world_rank) {
 
     MPI_Bcast(sizes, 4, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
 
-    printf("- Size received on client : (%i, %i) and (%i, %i)\n", sizes[0], sizes[1], sizes[2], sizes[3]);
+    //printf("- Size received on client : (%i, %i) and (%i, %i)\n", sizes[0], sizes[1], sizes[2], sizes[3]);
     unsigned int inputImgWidth   = sizes[0];
     unsigned int inputImgHeight  = sizes[1];
     unsigned int searchImgWidth  = sizes[2];
@@ -251,11 +251,11 @@ void client(int world_rank) {
     ////////////////// On reçoit les images 
     unsigned char * inputImg = (unsigned char *)malloc(inputImgWidth * inputImgHeight * sizeof(unsigned char)); 
     MPI_Bcast(inputImg, inputImgWidth * inputImgHeight, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
-    printf("- Image input on client : %i\n", world_rank);
+    //printf("- Image input on client : %i\n", world_rank);
  
     unsigned char * searchImg = (unsigned char *)malloc(searchImgWidth * searchImgHeight * sizeof(unsigned char));
     MPI_Bcast(searchImg, searchImgWidth * searchImgHeight, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
-    printf("- Image to search receive on client : %i\n", world_rank);
+    //printf("- Image to search receive on client : %i\n", world_rank);
  
 
     MPI_Status status; 
@@ -289,7 +289,7 @@ void client(int world_rank) {
             result[2] = currMin;
             } 
         } else { // status.MPI_TAG == END
-            printf("- Client : %i has end instruction\n", world_rank);   
+            //printf("- Client : %i has end instruction\n", world_rank);   
             // Lorsque l'on reçoit le signal de fin, on envoie notre résultat (les machines qui n'ont pas travailler renvoit FLOAT_MAX)
             MPI_Send(result, 3, MPI_UNSIGNED_LONG, 0, 1, MPI_COMM_WORLD); 
             // Et on arrete d'attendre du travail

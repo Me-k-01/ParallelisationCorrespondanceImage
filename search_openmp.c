@@ -48,6 +48,7 @@ uint64_t evaluatorOpenMP( unsigned int xOffset ,  unsigned int yOffset,
 }
 
 // Recherche exaustive dans l'image
+
 struct point searchOpenMP(unsigned char * img ,  unsigned int imgWidth,  unsigned int imgHeight, unsigned char * imgToSearch,  unsigned int imgSearchWidth,  unsigned int imgSearchHeight){
 
     // Comparer "imgToSearch" -> C avec l'ensemble des sous images de "img" -> Q
@@ -78,8 +79,9 @@ struct point searchOpenMP(unsigned char * img ,  unsigned int imgWidth,  unsigne
     }
     return position;
 }
+
 /*
- //un poil moin bien sur space
+//un poil moin bien
 // Recherche exaustive dans l'image
 struct point searchOpenMP(unsigned char * img ,  unsigned int imgWidth,  unsigned int imgHeight, unsigned char * imgToSearch,  unsigned int imgSearchWidth,  unsigned int imgSearchHeight){
 

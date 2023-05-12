@@ -52,8 +52,8 @@ int main (int argc, char *argv[])
 
     double time = omp_get_wtime();
     
-    unsigned char * saveExample = locateImgRef(inputImg,inputImgWidth,inputImgHeight,searchImg,searchImgWidth,searchImgHeight);
-    //unsigned char * saveExample = locateImgOpenMP(inputImg,inputImgWidth,inputImgHeight,searchImg,searchImgWidth,searchImgHeight);
+    //unsigned char * saveExample = locateImgRef(inputImg,inputImgWidth,inputImgHeight,searchImg,searchImgWidth,searchImgHeight);
+    unsigned char * saveExample = locateImgOpenMP(inputImg,inputImgWidth,inputImgHeight,searchImg,searchImgWidth,searchImgHeight);
     
 
     stbi_write_png("img/save_example.png", inputImgWidth, inputImgHeight, 3, saveExample, inputImgWidth*3);
